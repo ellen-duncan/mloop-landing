@@ -646,8 +646,8 @@ CONFIGURATION — EDIT THESE BEFORE GOING LIVE
   // ============= EDIT THESE =============
   const CONFIG = {
     // Option A (RECOMMENDED): proxy through a server you control
-    USE_AIRTABLE_DIRECT: true,             // set false to use SUBMIT_ENDPOINT instead
-    SUBMIT_ENDPOINT: 'https://your-proxy.example.com/lead', // your Cloudflare Worker / Vercel fn
+    USE_AIRTABLE_DIRECT: false,             // set false to use SUBMIT_ENDPOINT instead
+    SUBMIT_ENDPOINT: '/api/lead', // your Cloudflare Worker / Vercel fn
 
     // Option B: direct to Airtable (PAT will be visible in page source — see warning at top)
     AIRTABLE_BASE_ID: 'applsoxnoalWdFIkq',
