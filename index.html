@@ -1,0 +1,744 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>mLOOP — Explore lender matches. Free. Anonymously.</title>
+<meta name="description" content="Loan officers: see which lenders match your business — comp, culture, tech, programs. Free, anonymous, no pressure." />
+
+<!--
+====================================================================
+CONFIGURATION — EDIT THESE BEFORE GOING LIVE
+====================================================================
+
+1) META PIXEL ID
+   Replace YOUR_PIXEL_ID below with your real Pixel ID.
+
+2) AIRTABLE SUBMISSION
+   IMPORTANT SECURITY NOTE:
+   Putting an Airtable Personal Access Token (PAT) directly in this
+   file means ANYONE who views page source can read it. Two options:
+
+   (A) RECOMMENDED — Proxy through a Cloudflare Worker / Vercel
+       function / Netlify function. Set SUBMIT_ENDPOINT below to
+       your proxy URL. The proxy holds the token server-side.
+
+   (B) Direct-to-Airtable (faster to ship, less secure).
+       Create a PAT scoped to ONLY:
+         - base: applsoxnoalWdFIkq
+         - scope: data.records:write
+       Then set USE_AIRTABLE_DIRECT = true and paste the token.
+       Rotate it if the page ever leaks.
+
+3) FIELD MAPPING
+   The form posts Name, Email, NMLS. Verify the field names below
+   match the column names in your Loan Officers V3 table (case-
+   sensitive). Edit AIRTABLE_FIELD_MAP if your columns are named
+   differently (e.g. "Full Name" vs "Name").
+====================================================================
+-->
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Red+Hat+Display:wght@500;700;900&family=Red+Hat+Text:wght@400;500;700&display=swap" rel="stylesheet">
+
+<style>
+  :root {
+    --pine: #3A655B;
+    --charcoal: #262B30;
+    --green: #01A081;
+    --slate: #37414D;
+    --lime: #88F178;
+    --boulder: #60676E;
+    --light-lime: #DDFBD8;
+    --gray: #DFE0E2;
+    --mist: #F5F5F5;
+    --gradient: linear-gradient(135deg, #01A081 0%, #88F178 100%);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: 'Red Hat Text', -apple-system, BlinkMacSystemFont, sans-serif;
+    color: var(--charcoal);
+    background: #fff;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  h1, h2, h3, h4 { font-family: 'Red Hat Display', sans-serif; color: var(--charcoal); letter-spacing: -0.01em; }
+
+  a { color: var(--green); text-decoration: none; }
+
+  .container { max-width: 1140px; margin: 0 auto; padding: 0 24px; }
+
+  /* ---------- HEADER (intentionally minimal — no nav distractions) ---------- */
+  header {
+    padding: 20px 0;
+    background: #fff;
+    border-bottom: 1px solid var(--gray);
+  }
+  .header-inner { display: flex; align-items: center; justify-content: space-between; }
+  .logo {
+    font-family: 'Red Hat Display', sans-serif;
+    font-weight: 900;
+    font-size: 26px;
+    background: var(--gradient);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    letter-spacing: -0.02em;
+  }
+  .header-trust { font-size: 13px; color: var(--boulder); }
+  .header-trust strong { color: var(--charcoal); }
+
+  /* ---------- HERO ---------- */
+  .hero {
+    padding: 64px 0 80px;
+    background: linear-gradient(180deg, #fff 0%, var(--mist) 100%);
+  }
+  .hero-grid {
+    display: grid;
+    grid-template-columns: 1.1fr 1fr;
+    gap: 56px;
+    align-items: center;
+  }
+  .eyebrow {
+    display: inline-block;
+    background: var(--light-lime);
+    color: var(--pine);
+    padding: 6px 12px;
+    border-radius: 999px;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    margin-bottom: 20px;
+  }
+  h1 {
+    font-size: clamp(36px, 5vw, 56px);
+    font-weight: 900;
+    line-height: 1.05;
+    margin-bottom: 20px;
+  }
+  h1 .accent {
+    background: var(--gradient);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  .hero-sub {
+    font-size: 19px;
+    color: var(--slate);
+    margin-bottom: 28px;
+    max-width: 520px;
+  }
+  .hero-bullets {
+    list-style: none;
+    margin-bottom: 32px;
+  }
+  .hero-bullets li {
+    padding: 8px 0 8px 32px;
+    position: relative;
+    font-size: 16px;
+    color: var(--charcoal);
+  }
+  .hero-bullets li::before {
+    content: "";
+    position: absolute;
+    left: 0; top: 14px;
+    width: 18px; height: 18px;
+    background: var(--gradient);
+    border-radius: 50%;
+    box-shadow: inset 0 0 0 4px #fff, inset 0 0 0 6px var(--green);
+  }
+
+  /* ---------- FORM CARD ---------- */
+  .form-card {
+    background: #fff;
+    border-radius: 16px;
+    padding: 36px;
+    box-shadow: 0 20px 60px rgba(38, 43, 48, 0.12), 0 2px 4px rgba(38, 43, 48, 0.04);
+    border: 1px solid var(--gray);
+  }
+  .form-card h3 {
+    font-size: 22px;
+    margin-bottom: 6px;
+  }
+  .form-card .form-sub {
+    color: var(--boulder);
+    font-size: 14px;
+    margin-bottom: 24px;
+  }
+  .field { margin-bottom: 16px; }
+  .field label {
+    display: block;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--charcoal);
+    margin-bottom: 6px;
+  }
+  .field input {
+    width: 100%;
+    padding: 14px 16px;
+    border: 1.5px solid var(--gray);
+    border-radius: 10px;
+    font-family: inherit;
+    font-size: 16px;
+    color: var(--charcoal);
+    background: #fff;
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+  .field input:focus {
+    outline: none;
+    border-color: var(--green);
+    box-shadow: 0 0 0 4px rgba(1, 160, 129, 0.15);
+  }
+  .field .hint { font-size: 12px; color: var(--boulder); margin-top: 4px; }
+
+  .cta {
+    width: 100%;
+    background: var(--gradient);
+    color: var(--charcoal);
+    border: none;
+    padding: 16px 24px;
+    border-radius: 10px;
+    font-family: 'Red Hat Display', sans-serif;
+    font-weight: 700;
+    font-size: 17px;
+    cursor: pointer;
+    transition: transform 0.1s, box-shadow 0.15s, opacity 0.15s;
+    margin-top: 8px;
+  }
+  .cta:hover { transform: translateY(-1px); box-shadow: 0 8px 20px rgba(1, 160, 129, 0.3); }
+  .cta:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+
+  .form-foot {
+    text-align: center;
+    font-size: 12px;
+    color: var(--boulder);
+    margin-top: 14px;
+  }
+
+  .form-success, .form-error { display: none; padding: 14px 16px; border-radius: 10px; font-size: 14px; margin-top: 14px; }
+  .form-success { background: var(--light-lime); color: var(--pine); border: 1px solid var(--green); }
+  .form-error { background: #fdecec; color: #a32020; border: 1px solid #f1b6b6; }
+
+  /* ---------- SOCIAL PROOF BAR ---------- */
+  .proof {
+    background: var(--charcoal);
+    color: #fff;
+    padding: 32px 0;
+  }
+  .proof-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 32px;
+    text-align: center;
+  }
+  .proof-stat .num {
+    font-family: 'Red Hat Display', sans-serif;
+    font-weight: 900;
+    font-size: 32px;
+    background: var(--gradient);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    line-height: 1;
+  }
+  .proof-stat .label {
+    font-size: 13px;
+    color: var(--gray);
+    margin-top: 6px;
+    letter-spacing: 0.02em;
+  }
+
+  /* ---------- HOW IT WORKS ---------- */
+  section.section { padding: 88px 0; }
+  .section-head { text-align: center; max-width: 680px; margin: 0 auto 56px; }
+  .section-head h2 { font-size: clamp(28px, 3.5vw, 40px); margin-bottom: 16px; line-height: 1.15; }
+  .section-head p { font-size: 18px; color: var(--slate); }
+
+  .steps {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 32px;
+  }
+  .step {
+    background: var(--mist);
+    border-radius: 16px;
+    padding: 32px;
+    position: relative;
+  }
+  .step-num {
+    width: 40px; height: 40px;
+    background: var(--gradient);
+    color: var(--charcoal);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Red Hat Display', sans-serif;
+    font-weight: 900;
+    font-size: 18px;
+    margin-bottom: 18px;
+  }
+  .step h3 { font-size: 20px; margin-bottom: 10px; }
+  .step p { color: var(--slate); font-size: 15px; }
+
+  /* ---------- BENEFITS ---------- */
+  .benefits-wrap { background: var(--mist); }
+  .benefits {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 24px;
+  }
+  .benefit {
+    background: #fff;
+    border-radius: 14px;
+    padding: 28px;
+    border: 1px solid var(--gray);
+  }
+  .benefit-icon {
+    width: 44px; height: 44px;
+    background: var(--light-lime);
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    margin-bottom: 16px;
+  }
+  .benefit-icon svg { width: 22px; height: 22px; stroke: var(--green); fill: none; stroke-width: 2.2; }
+  .benefit h4 { font-size: 17px; margin-bottom: 8px; }
+  .benefit p { font-size: 14px; color: var(--slate); }
+
+  /* ---------- PRIVACY BLOCK ---------- */
+  .privacy {
+    background: var(--charcoal);
+    color: #fff;
+    padding: 72px 0;
+  }
+  .privacy-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 56px;
+    align-items: center;
+  }
+  .privacy h2 { color: #fff; font-size: clamp(28px, 3.5vw, 36px); margin-bottom: 16px; line-height: 1.2; }
+  .privacy h2 .accent { background: var(--gradient); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .privacy p { color: var(--gray); font-size: 17px; margin-bottom: 14px; }
+  .privacy ul { list-style: none; margin-top: 18px; }
+  .privacy ul li { padding: 8px 0 8px 28px; position: relative; color: #fff; }
+  .privacy ul li::before {
+    content: "✓";
+    position: absolute; left: 0; top: 8px;
+    color: var(--lime); font-weight: 900;
+  }
+  .privacy-visual {
+    background: linear-gradient(135deg, rgba(1, 160, 129, 0.15), rgba(136, 241, 120, 0.08));
+    border: 1px solid rgba(136, 241, 120, 0.25);
+    border-radius: 20px;
+    padding: 40px;
+    text-align: center;
+  }
+  .privacy-visual .lock-svg { width: 64px; height: 64px; margin: 0 auto 18px; }
+  .privacy-visual h3 { color: #fff; font-size: 22px; margin-bottom: 8px; }
+  .privacy-visual p { color: var(--gray); font-size: 15px; margin: 0; }
+
+  /* ---------- FAQ ---------- */
+  .faq { max-width: 760px; margin: 0 auto; }
+  .faq-item {
+    border-bottom: 1px solid var(--gray);
+    padding: 22px 0;
+  }
+  .faq-q {
+    font-family: 'Red Hat Display', sans-serif;
+    font-weight: 700;
+    font-size: 18px;
+    color: var(--charcoal);
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    list-style: none;
+  }
+  .faq-q::-webkit-details-marker { display: none; }
+  .faq-q::after {
+    content: "+";
+    font-size: 24px;
+    color: var(--green);
+    font-weight: 400;
+    transition: transform 0.2s;
+  }
+  details[open] .faq-q::after { content: "–"; }
+  .faq-a { color: var(--slate); font-size: 16px; padding-top: 12px; }
+
+  /* ---------- FINAL CTA ---------- */
+  .final-cta {
+    background: var(--gradient);
+    text-align: center;
+    padding: 80px 24px;
+  }
+  .final-cta h2 { font-size: clamp(30px, 4vw, 42px); color: var(--charcoal); margin-bottom: 16px; }
+  .final-cta p { font-size: 18px; color: var(--charcoal); margin-bottom: 28px; opacity: 0.85; }
+  .final-cta .cta {
+    display: inline-block;
+    width: auto;
+    background: var(--charcoal);
+    color: #fff;
+    padding: 18px 40px;
+    text-decoration: none;
+  }
+  .final-cta .cta:hover { box-shadow: 0 10px 24px rgba(0,0,0,0.25); }
+
+  /* ---------- FOOTER ---------- */
+  footer {
+    background: var(--charcoal);
+    color: var(--gray);
+    padding: 32px 0;
+    font-size: 13px;
+    text-align: center;
+  }
+  footer .logo { font-size: 20px; margin-bottom: 8px; }
+  footer a { color: var(--lime); }
+
+  /* ---------- MOBILE ---------- */
+  @media (max-width: 880px) {
+    .hero { padding: 40px 0 56px; }
+    .hero-grid { grid-template-columns: 1fr; gap: 36px; }
+    .form-card { padding: 28px; }
+    .proof-grid { grid-template-columns: repeat(2, 1fr); gap: 24px; }
+    .steps { grid-template-columns: 1fr; }
+    .benefits { grid-template-columns: repeat(2, 1fr); }
+    .privacy-grid { grid-template-columns: 1fr; gap: 32px; }
+    section.section { padding: 56px 0; }
+    .header-trust { display: none; }
+  }
+  @media (max-width: 480px) {
+    .benefits { grid-template-columns: 1fr; }
+    .proof-grid { grid-template-columns: 1fr 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ===== HEADER ===== -->
+<header>
+  <div class="container header-inner">
+    <div class="logo">mLOOP</div>
+    <div class="header-trust">🔒 <strong>100% confidential</strong> &middot; Free for LOs</div>
+  </div>
+</header>
+
+<!-- ===== HERO + FORM ===== -->
+<section class="hero">
+  <div class="container hero-grid">
+    <div>
+      <span class="eyebrow">For Mortgage Loan Officers</span>
+      <h1>Explore lender matches. <span class="accent">Free. Anonymously.</span></h1>
+      <p class="hero-sub">See which lenders fit your business — comp, culture, tech, and programs — without ever broadcasting that you're looking.</p>
+      <ul class="hero-bullets">
+        <li>Your name is never shared until <em>you</em> say so</li>
+        <li>Matched on what actually matters: splits, leads, products, leadership</li>
+        <li>No recruiter spam. No pressure. Browse on your timeline.</li>
+      </ul>
+    </div>
+
+    <div class="form-card">
+      <h3>See your matches in 60 seconds</h3>
+      <p class="form-sub">Three quick details. We'll show you lenders that fit.</p>
+
+      <form id="lead-form" novalidate>
+        <div class="field">
+          <label for="name">Full name</label>
+          <input type="text" id="name" name="name" required autocomplete="name" placeholder="Jane Doe" />
+        </div>
+        <div class="field">
+          <label for="email">Email</label>
+          <input type="email" id="email" name="email" required autocomplete="email" placeholder="jane@example.com" />
+          <div class="hint">We'll never share this. Promise.</div>
+        </div>
+        <div class="field">
+          <label for="nmls">NMLS #</label>
+          <input type="text" id="nmls" name="nmls" required inputmode="numeric" pattern="[0-9]*" placeholder="1234567" />
+          <div class="hint">Used only to verify you're a licensed LO.</div>
+        </div>
+
+        <button type="submit" class="cta" id="submit-btn">See my matches →</button>
+
+        <div class="form-foot">By submitting, you agree to mLOOP's terms. No spam. Unsubscribe anytime.</div>
+
+        <div class="form-success" id="form-success">
+          <strong>You're in.</strong> Check your email — your matches are on the way.
+        </div>
+        <div class="form-error" id="form-error">
+          Something went wrong. Please try again or email <a href="mailto:hello@mloop.co">hello@mloop.co</a>.
+        </div>
+      </form>
+    </div>
+  </div>
+</section>
+
+<!-- ===== SOCIAL PROOF BAR ===== -->
+<section class="proof">
+  <div class="container proof-grid">
+    <div class="proof-stat">
+      <div class="num">200+</div>
+      <div class="label">Vetted lenders</div>
+    </div>
+    <div class="proof-stat">
+      <div class="num">100%</div>
+      <div class="label">Confidential</div>
+    </div>
+    <div class="proof-stat">
+      <div class="num">$0</div>
+      <div class="label">Cost to LOs</div>
+    </div>
+    <div class="proof-stat">
+      <div class="num">60s</div>
+      <div class="label">To get matched</div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== HOW IT WORKS ===== -->
+<section class="section">
+  <div class="container">
+    <div class="section-head">
+      <h2>How mLOOP works</h2>
+      <p>A smarter way to explore — built for LOs, not recruiters.</p>
+    </div>
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">1</div>
+        <h3>Tell us what matters</h3>
+        <p>Comp structure, lead flow, products, culture — the stuff that actually moves the needle for your business.</p>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <h3>See your matches</h3>
+        <p>We surface lenders that fit your criteria. Browse profiles privately — no one knows you're looking.</p>
+      </div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <h3>Connect when you're ready</h3>
+        <p>You decide who sees your name and when. No pressure, no recruiter blast.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== BENEFITS ===== -->
+<section class="section benefits-wrap">
+  <div class="container">
+    <div class="section-head">
+      <h2>What you actually get to compare</h2>
+      <p>The details that matter when you're picking your next home.</p>
+    </div>
+    <div class="benefits">
+      <div class="benefit">
+        <div class="benefit-icon"><svg viewBox="0 0 24 24"><path d="M12 2v20M17 6H9.5a3.5 3.5 0 100 7h5a3.5 3.5 0 110 7H6"/></svg></div>
+        <h4>Compensation</h4>
+        <p>Splits, signing bonuses, overrides, P&L vs. corporate structures.</p>
+      </div>
+      <div class="benefit">
+        <div class="benefit-icon"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2M9 11a4 4 0 100-8 4 4 0 000 8zM23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg></div>
+        <h4>Culture &amp; leadership</h4>
+        <p>Leadership style, team size, what it's actually like to work there.</p>
+      </div>
+      <div class="benefit">
+        <div class="benefit-icon"><svg viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg></div>
+        <h4>Tech stack</h4>
+        <p>LOS, CRM, marketing tools — the daily-driver software you'll live in.</p>
+      </div>
+      <div class="benefit">
+        <div class="benefit-icon"><svg viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 11-5.93-9.14M22 4l-10 10-3-3"/></svg></div>
+        <h4>Products &amp; programs</h4>
+        <p>Niche products, down-payment assistance, jumbo, non-QM — what you can actually offer.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== PRIVACY BLOCK ===== -->
+<section class="privacy">
+  <div class="container privacy-grid">
+    <div>
+      <h2>You're in control. <span class="accent">Always.</span></h2>
+      <p>Looking around shouldn't put your current role at risk. mLOOP was built so you can explore quietly — and only reveal your identity when <em>you</em> decide.</p>
+      <ul>
+        <li>Your name stays hidden from lenders until you opt in</li>
+        <li>No public profile, no LinkedIn signal, no recruiter blast</li>
+        <li>Unsubscribe with one click — your data is yours</li>
+      </ul>
+    </div>
+    <div class="privacy-visual">
+      <svg class="lock-svg" viewBox="0 0 24 24" fill="none" stroke="#88F178" stroke-width="2">
+        <rect x="3" y="11" width="18" height="11" rx="2"/>
+        <path d="M7 11V7a5 5 0 0110 0v4"/>
+      </svg>
+      <h3>Anonymous by default</h3>
+      <p>Browse 200+ lender profiles without anyone knowing you're shopping.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ===== FAQ ===== -->
+<section class="section">
+  <div class="container">
+    <div class="section-head">
+      <h2>Common questions</h2>
+    </div>
+    <div class="faq">
+      <details class="faq-item">
+        <summary class="faq-q">Is this really free?</summary>
+        <div class="faq-a">Yes. mLOOP is free for loan officers. We're paid by lenders when a match leads to a conversation you choose to have.</div>
+      </details>
+      <details class="faq-item">
+        <summary class="faq-q">Will my current employer find out?</summary>
+        <div class="faq-a">Not from us. Your identity stays private until you opt in to share it with a specific lender. No public profile, no notifications, no leaks.</div>
+      </details>
+      <details class="faq-item">
+        <summary class="faq-q">Why do you need my NMLS number?</summary>
+        <div class="faq-a">To confirm you're a licensed loan officer. It's never shown to lenders and never used for marketing.</div>
+      </details>
+      <details class="faq-item">
+        <summary class="faq-q">How is this different from a recruiter?</summary>
+        <div class="faq-a">A recruiter pushes you toward whoever is paying them. mLOOP shows you matches based on what you said matters — and lets you stay anonymous until you don't want to be.</div>
+      </details>
+      <details class="faq-item">
+        <summary class="faq-q">How long does it take?</summary>
+        <div class="faq-a">About 60 seconds to sign up. You'll see initial matches the same day.</div>
+      </details>
+    </div>
+  </div>
+</section>
+
+<!-- ===== FINAL CTA ===== -->
+<section class="final-cta">
+  <div class="container">
+    <h2>See who's a fit. In 60 seconds.</h2>
+    <p>Free. Anonymous. No recruiter spam.</p>
+    <a href="#lead-form" class="cta">See my matches →</a>
+  </div>
+</section>
+
+<!-- ===== FOOTER ===== -->
+<footer>
+  <div class="container">
+    <div class="logo">mLOOP</div>
+    <div>Built for mortgage loan officers. © mLOOP.</div>
+    <div style="margin-top:8px;"><a href="mailto:hello@mloop.co">hello@mloop.co</a></div>
+  </div>
+</footer>
+
+<!-- ===== META PIXEL (paste your Pixel ID) ===== -->
+<script>
+  !function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+  n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;
+  n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;
+  t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,
+  document,'script','https://connect.facebook.net/en_US/fbevents.js');
+  fbq('init', 'YOUR_PIXEL_ID'); // ← REPLACE with your Pixel ID
+  fbq('track', 'PageView');
+</script>
+<noscript><img height="1" width="1" style="display:none" src="https://www.facebook.com/tr?id=YOUR_PIXEL_ID&ev=PageView&noscript=1"/></noscript>
+
+<!-- ===== FORM SUBMISSION ===== -->
+<script>
+  // ============= EDIT THESE =============
+  const CONFIG = {
+    // Option A (RECOMMENDED): proxy through a server you control
+    USE_AIRTABLE_DIRECT: true,             // set false to use SUBMIT_ENDPOINT instead
+    SUBMIT_ENDPOINT: 'https://your-proxy.example.com/lead', // your Cloudflare Worker / Vercel fn
+
+    // Option B: direct to Airtable (PAT will be visible in page source — see warning at top)
+    AIRTABLE_BASE_ID: 'applsoxnoalWdFIkq',
+    AIRTABLE_TABLE_ID: 'tblQTzCEstnQUA56V', // Marketing Loan Officers (lighter table — recommended for marketing submissions)
+    AIRTABLE_PAT: 'patXXXXXXXXXXXXXX.YYYYYYYYYY', // ← PASTE YOUR PAT HERE (scope: data.records:write only)
+
+    // Match these to your actual Airtable column names (case-sensitive)
+    AIRTABLE_FIELD_MAP: {
+      name:  'Name',
+      email: 'Email',
+      nmls:  'NMLS #',
+      source: 'Source'
+    }
+  };
+  // ======================================
+
+  const form = document.getElementById('lead-form');
+  const btn = document.getElementById('submit-btn');
+  const successEl = document.getElementById('form-success');
+  const errorEl = document.getElementById('form-error');
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    successEl.style.display = 'none';
+    errorEl.style.display = 'none';
+
+    const data = {
+      name: form.name.value.trim(),
+      email: form.email.value.trim(),
+      nmls: form.nmls.value.trim()
+    };
+
+    if (!data.name || !data.email || !data.nmls) {
+      errorEl.textContent = 'Please fill out all three fields.';
+      errorEl.style.display = 'block';
+      return;
+    }
+
+    btn.disabled = true;
+    btn.textContent = 'Submitting…';
+
+    try {
+      let res;
+      if (CONFIG.USE_AIRTABLE_DIRECT) {
+        const fields = {};
+        fields[CONFIG.AIRTABLE_FIELD_MAP.name]  = data.name;
+        fields[CONFIG.AIRTABLE_FIELD_MAP.email] = data.email;
+        fields[CONFIG.AIRTABLE_FIELD_MAP.nmls]  = data.nmls;
+        fields[CONFIG.AIRTABLE_FIELD_MAP.source] = 'Meta Ads LP';
+
+        res = await fetch(`https://api.airtable.com/v0/${CONFIG.AIRTABLE_BASE_ID}/${CONFIG.AIRTABLE_TABLE_ID}`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${CONFIG.AIRTABLE_PAT}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ records: [{ fields }] })
+        });
+      } else {
+        res = await fetch(CONFIG.SUBMIT_ENDPOINT, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ...data, source: 'Meta Ads LP' })
+        });
+      }
+
+      if (!res.ok) {
+        const errText = await res.text();
+        console.error('Submit failed:', res.status, errText);
+        throw new Error('submit failed');
+      }
+
+      // Fire Meta Pixel Lead event
+      if (window.fbq) {
+        fbq('track', 'Lead', { content_name: 'LO landing page', value: 0, currency: 'USD' });
+      }
+
+      // Success state
+      form.style.display = 'none';
+      successEl.style.display = 'block';
+
+      // Optional: redirect to a thank-you page
+      // setTimeout(() => { window.location.href = '/thank-you'; }, 1200);
+
+    } catch (err) {
+      errorEl.style.display = 'block';
+      btn.disabled = false;
+      btn.textContent = 'See my matches →';
+    }
+  });
+</script>
+
+</body>
+</html>
