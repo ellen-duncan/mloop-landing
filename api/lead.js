@@ -21,11 +21,13 @@ export default async function handler(req, res) {
         },
         body: JSON.stringify({
           records: [{
-            fields: {
-              'Name': name,
-              'Email': email,
-              'NMLS #': nmls,
-              'Source': source || 'Meta Ads LP'
+           fields: {
+  'Full Name': name,
+  'Email Address': email,
+  'NMLS #': nmls,
+  'Source': source || 'Meta Ads LP',
+  'Submission Date': new Date().toISOString().split('T')[0]
+}
             }
           }]
         })
