@@ -1,5 +1,4 @@
-export default async function handler(req, res) {
-  // Only accept POST
+module.exports = async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
@@ -21,13 +20,12 @@ export default async function handler(req, res) {
         },
         body: JSON.stringify({
           records: [{
-           fields: {
-  'Full Name': name,
-  'Email Address': email,
-  'NMLS #': nmls,
-  'Source': source || 'Meta Ads LP',
-  'Submission Date': new Date().toISOString().split('T')[0]
-}
+            fields: {
+              'Full Name': name,
+              'Email Address': email,
+              'NMLS #': nmls,
+              'Source': source || 'Meta Ads LP',
+              'Submission Date': new Date().toISOString().split('T')[0]
             }
           }]
         })
@@ -37,7 +35,7 @@ export default async function handler(req, res) {
     if (!airtableRes.ok) {
       const errText = await airtableRes.text();
       console.error('Airtable error:', airtableRes.status, errText);
-      return res.status(500).json({ error: 'Submit failed' });
+      return res.status(500).json({ error: 'Submit failed', detail: errText });
     }
 
     return res.status(200).json({ ok: true });
@@ -45,4 +43,4 @@ export default async function handler(req, res) {
     console.error('Handler error:', err);
     return res.status(500).json({ error: 'Server error' });
   }
-}
+};
