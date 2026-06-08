@@ -23,7 +23,7 @@ module.exports = async function handler(req, res) {
             fields: {
               'Full Name': name,
               'Email Address': email,
-              'NMLS #': nmls,
+              'NMLS': nmls,
               'Source': source || 'Meta Ads LP',
               'Submission Date': new Date().toISOString().split('T')[0]
             }
